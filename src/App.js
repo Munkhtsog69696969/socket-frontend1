@@ -1,35 +1,64 @@
 import './App.css';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import io from "socket.io-client";
 
-import Chat from './Chat';
 
 //connect with backend
-const socket=io.connect("http://localhost:3333");
+const socket=io.connect("http://localhost:8090");
 
 function App() {
-  const [name,setName]=useState();
 
-  const [roomId,setRoomId]=useState();
+  const name=useRef();
 
-  function JoinRoom(){
-    if(name!="" && roomId!=""){
-      socket.emit("join-room",{name:name , roomId:roomId});
-    }
+  const room=useRef();
+
+  const messages=useRef();
+
+  const [receivedMessages,setReceivedMessages]=useState();
+
+  const [messagesList,setMessagesList]=useState([]);
+
+  function Joinroom(){
+    socket.emit("join_room",{name:name.current.value , room:room.current.value})
   }
 
+  function SendMessages(){
+    socket.emit("send_messages",{room:room.current.value , messages:messages.current.value})
+  }
+
+  useEffect(()=>{
+    socket.on("received_messages",(data)=>[
+      // console.log(data)
+      setMessagesList((list)=>[...list , data])
+    ])  
+  },[socket])
+
   return (
-    <div className="App">
+    <div>
+      <input placeholder='name' ref={name}/>
 
-      <input placeholder='Name...' onChange={(event)=>{setName(event.target.value)}}/>
+      <input placeholder='room' ref={room}/>
 
-      <input placeholder='Room id...' onChange={(event)=>{setRoomId(event.target.value)}}/>
+      <button onClick={Joinroom}>join room</button>
 
-      <button onClick={JoinRoom}>Join Room</button>
+      <div>
+        <input placeholder='messages' ref={messages}/>
 
-      <Chat socket={socket} name={name} roomId={roomId}/>
+        <button onClick={SendMessages}>Send</button>
+      </div>
+
+      <div>
+        {
+          messagesList && messagesList.map((item,i)=>{
+            return(
+              <div>{item}</div>
+            )
+          })
+        }
+      </div>
+
     </div>
   );
 
